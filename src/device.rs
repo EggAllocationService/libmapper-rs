@@ -51,7 +51,7 @@ impl Device<'_> {
     /// Before calling any other methods on the device, you should poll it until it is ready.
     /// 
     /// # Notes
-    /// If you plan on creating multiple devices, consider using (Device::create_from_graph)[Device::create_from_graph] instead to pool resources.
+    /// If you plan on creating multiple devices, consider using [Device::create_from_graph] instead to pool resources.
     pub fn create(name: &str) -> Device {
         let name_ptr = CString::new(name).expect("CString::new failed");
         unsafe {
