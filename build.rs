@@ -8,7 +8,7 @@ fn main() {
         println!("cargo:rustc-link-lib=liblo");
     } else {
         pkg_config::Config::new()
-            .atleast_version("2.4.9")
+            .atleast_version("2.4.13")
             .probe("libmapper")
             .unwrap();
     }
