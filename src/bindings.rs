@@ -273,7 +273,7 @@ extern "C" {
     pub fn mpr_obj_get_prop_by_idx(
         object: mpr_obj,
         index: ::std::os::raw::c_int,
-        key: *mut *const ::std::os::raw::c_char,
+        key: *const ::std::os::raw::c_char,
         length: *mut ::std::os::raw::c_int,
         type_: *mut mpr_type,
         value: *mut *const ::std::os::raw::c_void,
