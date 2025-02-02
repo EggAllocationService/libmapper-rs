@@ -1,4 +1,4 @@
-use std::{ffi::c_void, ptr};
+use std::{ffi::{c_int, c_void, CString}, ptr::{self, null_mut}};
 
 use crate::{bindings::{mpr_obj, mpr_obj_get_prop_by_idx, mpr_obj_get_type, mpr_obj_set_prop, mpr_prop, mpr_type}, device::{Device, MappableType}, graph::Map, signal::Signal};
 
@@ -50,6 +50,11 @@ pub trait MapperObject {
   /// 
   /// If `publish` is true, the property will be published to other peers. Set to false if this property is only for local use.
   fn set_custom_property<T: MappableType>(&self, property: &str, value: T, publish: bool);
+
+  /// Retrieve information aboute a property by a given index
+  /// 
+  /// If the object has no property by the given identifier, [PropertyError::PropertyNotFound] is returned
+  fn get_property_information(&self, property: PropertyName) -> Result<PropertyInfo, PropertyError>;
 }
 
 impl<A> MapperObject for A where A: AsMprObject {
@@ -114,6 +119,39 @@ impl<A> MapperObject for A where A: AsMprObject {
            1, T::get_mpr_type(), &value as *const T as *const c_void, publish.into());
       }
   }
+  
+  fn get_property_information(&self, property: PropertyName) -> Result<PropertyInfo, PropertyError> {
+    let mut actual_type: mpr_type = mpr_type::MPR_NULL;
+    let mut length: c_int = 0;
+    let mut published: c_int = 0;
+    
+    let found = match property {
+      PropertyName::Default(id) => {
+        unsafe {
+          mpr_obj_get_prop_by_idx(self.as_mpr_object(), id as i32 , std::ptr::null_mut(), &mut length, &mut actual_type, std::ptr::null_mut(), std::ptr::null_mut())
+        }
+      }
+      PropertyName::Custom(name) => {
+        unsafe {
+          let str = CString::new(name).expect("Error creating CString");
+          mpr_obj_get_prop_by_idx(self.as_mpr_object(),  mpr_prop::MPR_PROP_EXTRA as i32, str.as_ptr() as *const i8, &mut length, &mut actual_type, 
+            ptr::null_mut(), &mut published)
+        }
+      }
+    };
+
+    if found == mpr_prop::MPR_PROP_UNKNOWN {
+      return Err(PropertyError::PropertyNotFound);
+    }
+
+    Ok(
+      PropertyInfo {
+        mapper_type: actual_type,
+        published: published != 0,
+        vector_length: length as u32
+      }
+    )
+  }
 }
 
 /// Errors that can occur when working with properties
@@ -123,4 +161,15 @@ pub enum PropertyError {
   PropertyNotFound,
   /// The property was found, but the type did not match the expected type
   TypeMismatch
+}
+
+pub enum PropertyName<'a> {
+  Default(mpr_prop),
+  Custom(&'a str)
+}
+
+pub struct PropertyInfo {
+  pub mapper_type: mpr_type,
+  pub vector_length: u32,
+  pub published: bool
 }
